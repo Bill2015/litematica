@@ -1,7 +1,9 @@
 package fi.dy.masa.litematica.util;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
@@ -20,6 +22,7 @@ import fi.dy.masa.litematica.config.Configs;
 public class InventoryUtils
 {
     private static final List<Integer> PICK_BLOCKABLE_SLOTS = new ArrayList<>();
+    private static final Queue<Integer> PRIORITY_SLOT = new LinkedList<>();
     private static int nextPickSlotIndex;
 
     public static void setPickBlockableSlots(String configStr)
@@ -156,6 +159,24 @@ public class InventoryUtils
         return (stack.isEmpty() || stack.getItem().isDamageable() == false);
     }
 
+    private static int getPriorityHotBarSlot(int slotNum){
+
+        if( PRIORITY_SLOT.contains( (Integer)slotNum ) ){
+            Integer head = PRIORITY_SLOT.poll();
+            PRIORITY_SLOT.offer( head );
+            return head.intValue();
+        }
+        else{
+            if (++nextPickSlotIndex >= PICK_BLOCKABLE_SLOTS.size())
+            {
+                nextPickSlotIndex = 0;
+            }
+
+            PRIORITY_SLOT.offer( nextPickSlotIndex );
+            return nextPickSlotIndex;
+        }
+    }
+
     private static int getPickBlockTargetSlot(PlayerEntity player)
     {
         if (PICK_BLOCKABLE_SLOTS.isEmpty())
@@ -164,16 +185,17 @@ public class InventoryUtils
         }
 
         int slotNum = player.getInventory().selectedSlot;
+        slotNum = getPriorityHotBarSlot(slotNum);
 
         if (canPickToSlot(player.getInventory(), slotNum))
         {
             return slotNum;
         }
 
-        if (nextPickSlotIndex >= PICK_BLOCKABLE_SLOTS.size())
-        {
-            nextPickSlotIndex = 0;
-        }
+        // if (nextPickSlotIndex >= PICK_BLOCKABLE_SLOTS.size())
+        // {
+        //     nextPickSlotIndex = 0;
+        // }
 
         for (int i = 0; i < PICK_BLOCKABLE_SLOTS.size(); ++i)
         {
@@ -183,6 +205,9 @@ public class InventoryUtils
             {
                 nextPickSlotIndex = 0;
             }
+
+            // slotNum = PICK_BLOCKABLE_SLOTS.get(nextPickSlotIndex);
+            slotNum = getPriorityHotBarSlot(slotNum);
 
             if (canPickToSlot(player.getInventory(), slotNum))
             {
